@@ -43,12 +43,12 @@ ___
 Dentro da pasta `desafios`, eles estão divididos em fáceis, médios e difíceis. <br>
 Cada desafio possui uma série de instruções e um arquivo `script.py` que deverá ser modificado de acordo com o desafio.
 
-1. Fáceis - Obrigatórios
+1. Fáceis
     * 01 - Coletar dados de uma página web;
     * 02 - Coletar dados de uma página web com paginação;
     * 03 - Coletar dados de uma página web com um botão para carregar mais dados;
 
-2. Médios - Fazer ao menos 2
+2. Médios - Diferencial
     * 01 - Desafio que envolve preencher inputs dinâmicos que trocam de posição na tela;
     * 02 - Agrupar dados de 3 arquivos `.csv` e organizar pastas com base nos dados;
     * 03 - Coletar dados de uma página web em que os dados aparecem conforme o usuário desce a página;
