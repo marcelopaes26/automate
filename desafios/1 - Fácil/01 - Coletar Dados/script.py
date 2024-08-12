@@ -11,11 +11,69 @@ class Desafio01:
         self.navegador.get('https://webscraper.io/test-sites/e-commerce/allinone')
         self.navegador.maximize_window()
 
+    # Função para salvar os produtos em uma lista
+    def salva_produtos(self, dados_produtos):
+        # Encontre todos os produtos na página
+        produtos = self.navegador.find_elements(By.CLASS_NAME, "thumbnail")
+
+        for produto in produtos:
+            # Coleta os dados do produto
+            nome = produto.find_element(By.XPATH, ".//a[@title]").get_attribute("title").strip()
+            preco = produto.find_element(By.CLASS_NAME, "price").text
+            descricao = produto.find_element(By.CLASS_NAME, "description").text
+            estrelas = produto.find_element(By.XPATH, ".//div[@class='ratings']//p[@data-rating]").get_attribute(
+                "data-rating")
+            reviews = produto.find_element(By.XPATH, ".//p[@class='review-count float-end']").text.strip()
+
+            # Adiciona o produto com seus dados na lista
+            dados_produtos.append({
+                "Nome": nome,
+                "Preco": preco,
+                "Descricao": descricao,
+                "Estrelas": estrelas,
+                "Reviews": reviews
+            })
+
+        return dados_produtos
+
+    # Função para converter colunas para os dados apropriados
+    def converte_colunas(self, df):
+        # Converte as colunas para os dados apropriados
+        df['Preco'] = df['Preco'].replace(r'[\$,]', '', regex=True).astype(float)
+        df['Reviews'] = df['Reviews'].replace(' reviews', '', regex=True).astype(int)
+        df['Estrelas'] = df['Estrelas'].astype(int)
+
+        return df
+
+    # Função para ordenar os produtos
+    def ordena_produtos(self, df):
+        # Ordena por preço (Menor - Maior)
+        por_preco = df.sort_values(by='Preco', ascending=True)
+
+        # Ordena por quantidade de reviews (Maior - Menor)
+        por_reviews = df.sort_values(by='Reviews', ascending=False)
+
+        # Ordena por quantidade de estrelas (Maior - Menor)
+        por_estrelas = df.sort_values(by='Estrelas', ascending=False)
+
+        # Ordena por menor preço, maior quantidade de reviews e maior quantidade de estrelas
+        bonus = df.sort_values(by=['Preco', 'Reviews', 'Estrelas'], ascending=[True, False, False])
+
+        return por_preco, por_reviews, por_estrelas, bonus
+
+    # Função para salvar o DataFrame em Excel com 4 planilhas
+    def salva_para_excel(self, produtos_ordenados, nome_arquivo='produtos.xlsx'):
+        # Cria um ExcelWriter para salvar um Excel com 4 planilhas
+        with pd.ExcelWriter(nome_arquivo) as writer:
+            produtos_ordenados[0].to_excel(writer, sheet_name='Por Preço', index=False)
+            produtos_ordenados[1].to_excel(writer, sheet_name='Por Reviews', index=False)
+            produtos_ordenados[2].to_excel(writer, sheet_name='Por Estrelas', index=False)
+            produtos_ordenados[3].to_excel(writer, sheet_name='Bonus', index=False)
+
     def iniciar(self) -> None:
         # Seu script aqui.
-        WebDriverWait(self.navegador, 10).until(
-            EC.presence_of_element_located((By.CLASS_NAME, "category-link"))
-        )
+        # Aguarda 10 segundos
+        WebDriverWait(self.navegador, 10).until(EC.presence_of_element_located((By.CLASS_NAME, "category-link")))
 
         # Clique no link da categoria
         # Computers
@@ -35,49 +93,16 @@ class Desafio01:
         # Lista para laptops
         dados_laptops = []
 
-        for produto in produtos:
-                # Coleta os dados do produto
-                nome = produto.find_element(By.XPATH, ".//a[@title]").get_attribute("title").strip()
-                preco = produto.find_element(By.CLASS_NAME, "price").text
-                descricao = produto.find_element(By.CLASS_NAME, "description").text
-                estrelas = produto.find_element(By.XPATH, ".//div[@class='ratings']//p[@data-rating]").get_attribute("data-rating")
-                reviews = produto.find_element(By.XPATH, ".//p[@class='review-count float-end']").text.strip()
-
-                # Adiciona o produto com seus dados na lista
-                dados_laptops.append({
-                    "Nome": nome,
-                    "Preco": preco,
-                    "Descricao": descricao,
-                    "Estrelas": estrelas,
-                    "Reviews": reviews
-                })
+        # Chama a função salva_produtos para salvar os dados na lista
+        self.salva_produtos(dados_laptops)
 
         # Converte para um DataFrame
         df_laptops = pd.DataFrame(dados_laptops)
 
-        # Converte as colunas para os dados apropriados
-        df_laptops['Preco'] = df_laptops['Preco'].replace(r'[\$,]', '', regex=True).astype(float)
-        df_laptops['Reviews'] = df_laptops['Reviews'].replace(' reviews', '', regex=True).astype(int)
-        df_laptops['Estrelas'] = df_laptops['Estrelas'].astype(int)
-
-        # Ordena por preço
-        laptops_por_preco = df_laptops.sort_values(by='Preco', ascending=True)
-
-        # Ordena por quantidade de reviews
-        laptops_por_reviews = df_laptops.sort_values(by='Reviews', ascending=False)
-
-        # Ordena por quantidade de estrelas
-        laptops_por_estrelas = df_laptops.sort_values(by='Estrelas', ascending=False)
-
-        # Ordena por menor preço, maior quantidade de reviews e maior quantidade de estrelas
-        laptops_bonus = df_laptops.sort_values(by=['Preco', 'Reviews', 'Estrelas'], ascending=[True, False, False])
-
-        # Cria um ExcelWriter para salvar um Excel com 4 abas
-        with pd.ExcelWriter('laptops.xlsx') as writer:
-            laptops_por_preco.to_excel(writer, sheet_name='Por Preço', index=False)
-            laptops_por_reviews.to_excel(writer, sheet_name='Por Reviews', index=False)
-            laptops_por_estrelas.to_excel(writer, sheet_name='Por Estrelas', index=False)
-            laptops_bonus.to_excel(writer, sheet_name='Bonus', index=False)
+        # Chama as funções para converter as colunas, ordenar e salvar em Excel
+        df_laptops = self.converte_colunas(df_laptops)
+        laptops_ordenados = self.ordena_produtos(df_laptops)
+        self.salva_para_excel(laptops_ordenados, nome_arquivo='laptops.xlsx')
 
         # Tablets
         aba_tablets = self.navegador.find_element(By.XPATH, "//a[@href='/test-sites/e-commerce/allinone/computers/tablets']")
@@ -92,49 +117,16 @@ class Desafio01:
         # Lista para tablets
         dados_tablets = []
 
-        for produto in produtos:
-            # Coleta os dados do produto
-            nome = produto.find_element(By.XPATH, ".//a[@title]").get_attribute("title").strip()
-            preco = produto.find_element(By.CLASS_NAME, "price").text
-            descricao = produto.find_element(By.CLASS_NAME, "description").text
-            estrelas = produto.find_element(By.XPATH, ".//div[@class='ratings']//p[@data-rating]").get_attribute("data-rating")
-            reviews = produto.find_element(By.XPATH, ".//p[@class='review-count float-end']").text.strip()
-
-            # Adiciona o produto com seus dados na lista
-            dados_tablets.append({
-                "Nome": nome,
-                "Preco": preco,
-                "Descricao": descricao,
-                "Estrelas": estrelas,
-                "Reviews": reviews
-            })
+        # Chama a função salva_produtos para salvar os dados na lista
+        self.salva_produtos(dados_tablets)
 
         # Converte para um DataFrame
         df_tablets = pd.DataFrame(dados_tablets)
 
-        # Converte as colunas para os dados apropriados
-        df_tablets['Preco'] = df_tablets['Preco'].replace(r'[\$,]', '', regex=True).astype(float)
-        df_tablets['Reviews'] = df_tablets['Reviews'].replace(' reviews', '', regex=True).astype(int)
-        df_tablets['Estrelas'] = df_tablets['Estrelas'].astype(int)
-
-        # Ordena por preço
-        tablets_por_preco = df_tablets.sort_values(by='Preco', ascending=True)
-
-        # Ordena por quantidade de reviews
-        tablets_por_reviews = df_tablets.sort_values(by='Reviews', ascending=False)
-
-        # Ordena por quantidade de estrelas
-        tablets_por_estrelas = df_tablets.sort_values(by='Estrelas', ascending=False)
-
-        # Ordena por menor preço, maior quantidade de reviews e maior quantidade de estrelas
-        tablets_bonus = df_tablets.sort_values(by=['Preco', 'Reviews', 'Estrelas'], ascending=[True, False, False])
-
-        # Cria um ExcelWriter para salvar um Excel com 4 abas
-        with pd.ExcelWriter('tablets.xlsx') as writer:
-            tablets_por_preco.to_excel(writer, sheet_name='Por Preço', index=False)
-            tablets_por_reviews.to_excel(writer, sheet_name='Por Reviews', index=False)
-            tablets_por_estrelas.to_excel(writer, sheet_name='Por Estrelas', index=False)
-            tablets_bonus.to_excel(writer, sheet_name='Bonus', index=False)
+        # Chama as funções para converter as colunas, ordenar e salvar em Excel
+        df_tablets = self.converte_colunas(df_tablets)
+        tablets_ordenados = self.ordena_produtos(df_tablets)
+        self.salva_para_excel(tablets_ordenados, nome_arquivo='tablets.xlsx')
 
 
         # Clique no link da categoria
@@ -155,52 +147,19 @@ class Desafio01:
         # Lista para phones
         dados_phones = []
 
-        for produto in produtos:
-            # Coleta os dados do produto
-            nome = produto.find_element(By.XPATH, ".//a[@title]").get_attribute("title").strip()
-            preco = produto.find_element(By.CLASS_NAME, "price").text
-            descricao = produto.find_element(By.CLASS_NAME, "description").text
-            estrelas = produto.find_element(By.XPATH, ".//div[@class='ratings']//p[@data-rating]").get_attribute("data-rating")
-            reviews = produto.find_element(By.XPATH, ".//p[@class='review-count float-end']").text.strip()
-
-            # Adiciona o produto com seus dados na lista
-            dados_phones.append({
-                "Nome": nome,
-                "Preco": preco,
-                "Descricao": descricao,
-                "Estrelas": estrelas,
-                "Reviews": reviews
-            })
+        # Chama a função salva_produtos para salvar os dados na lista
+        self.salva_produtos(dados_phones)
 
         # Converte para um DataFrame
         df_phones = pd.DataFrame(dados_phones)
 
-        # Converte as colunas para os dados apropriados
-        df_phones['Preco'] = df_phones['Preco'].replace(r'[\$,]', '', regex=True).astype(float)
-        df_phones['Reviews'] = df_phones['Reviews'].replace(' reviews', '', regex=True).astype(int)
-        df_phones['Estrelas'] = df_phones['Estrelas'].astype(int)
-
-        # Ordena por preço
-        phones_por_preco = df_phones.sort_values(by='Preco', ascending=True)
-
-        # Ordena por quantidade de reviews
-        phones_por_reviews = df_phones.sort_values(by='Reviews', ascending=False)
-
-        # Ordena por quantidade de estrelas
-        phones_por_estrelas = df_phones.sort_values(by='Estrelas', ascending=False)
-
-        # Ordena por menor preço, maior quantidade de reviews e maior quantidade de estrelas
-        phones_bonus = df_phones.sort_values(by=['Preco', 'Reviews', 'Estrelas'], ascending=[True, False, False])
-
-        # Cria um ExcelWriter para salvar um Excel com 4 abas
-        with pd.ExcelWriter('phones.xlsx') as writer:
-            phones_por_preco.to_excel(writer, sheet_name='Por Preço', index=False)
-            phones_por_reviews.to_excel(writer, sheet_name='Por Reviews', index=False)
-            phones_por_estrelas.to_excel(writer, sheet_name='Por Estrelas', index=False)
-            phones_bonus.to_excel(writer, sheet_name='Bonus', index=False)
+        # Chama as funções para converter as colunas, ordenar e salvar em Excel
+        df_phones = self.converte_colunas(df_phones)
+        phones_ordenados = self.ordena_produtos(df_phones)
+        self.salva_para_excel(phones_ordenados, nome_arquivo='phones.xlsx')
 
         # Fecha o navegador
-        self.navegador.close()
+        self.navegador.quit()
         input()
 
 
